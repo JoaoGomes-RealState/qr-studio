@@ -186,6 +186,7 @@ qrStyle.addEventListener('change', () => {
 const logoInput = document.querySelector<HTMLInputElement>('#qr-logo')!
 const removeLogo = document.querySelector<HTMLButtonElement>('#remove-logo')!
 
+
 logoInput.addEventListener('change', () => {
   const file = logoInput.files?.[0]
 
@@ -210,21 +211,46 @@ logoInput.addEventListener('change', () => {
   reader.onload = () => {
     if (typeof reader.result !== 'string') return
 
-    qr.update({
-      image: reader.result,
-      imageOptions: {
-        crossOrigin: 'anonymous',
-        margin: 5,
-        imageSize: Number(
-  document.querySelector<HTMLInputElement>('#logo-size')!.value
-) / 100,
-        hideBackgroundDots: true,
-      },
-    })
+    const image = new Image()
+
+    image.onload = () => {
+      const maxSize = 300
+      const scale = Math.min(
+        1,
+        maxSize / Math.max(image.width, image.height)
+      )
+
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.max(1, Math.round(image.width * scale))
+      canvas.height = Math.max(1, Math.round(image.height * scale))
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+      // WebP permite reduzir o tamanho e manter transparência.
+      const optimizedLogo = canvas.toDataURL('image/webp', 0.85)
+
+      qr.update({
+        image: optimizedLogo,
+        imageOptions: {
+          crossOrigin: 'anonymous',
+          margin: 5,
+          imageSize: Number(
+            document.querySelector<HTMLInputElement>('#logo-size')!.value
+          ) / 100,
+          hideBackgroundDots: true,
+        },
+      })
+    }
+
+    image.src = reader.result
   }
 
   reader.readAsDataURL(file)
 })
+
 
 removeLogo.addEventListener('click', () => {
   logoInput.value = ''
